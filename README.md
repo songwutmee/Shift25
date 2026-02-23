@@ -54,4 +54,4 @@ Since the game involves many customers entering and leaving the store, I impleme
 
 ---
 
-**Note:** This project is currently a **Work in Progress**. New systems like the "Yeet" (Trash disposal) and "Cram" (Shelf refilling) are being integrated to further explore the theme of multi-tasking stress.
+**Note:** This project is currently a **Work in Progress**. New systems like the "Yeet" (Trash disposal) and "Cram" (Shelf refilling) are being integrated.
