@@ -17,7 +17,7 @@ The game uses a **PSX-inspired visual style** with mixed-media elements to creat
 
 ---
 
-###  Technical Approach & Architecture
+###  Architecture
 Since this is a **Mini Thesis** project, I focused on building a scalable and professional architecture that can handle complex, overlapping gameplay systems.
 
 - **Asynchronous Task Management (UniTask):** 
