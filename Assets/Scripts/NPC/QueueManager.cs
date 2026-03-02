@@ -10,6 +10,8 @@ namespace Shift25.Managers
         [SerializeField] private List<Transform> queuePoints; 
         private List<NPCController> _npcInQueue = new List<NPCController>();
 
+        public int CurrentQueueCount => _npcInQueue.Count;
+
         private void Awake() => Instance = this;
 
         public void JoinQueue(NPCController npc)
@@ -29,7 +31,6 @@ namespace Shift25.Managers
             return queuePoints[pointIndex];
         }
 
-        // [Logic] ฟังก์ชันตรวจสอบว่า NPC ตัวนี้คือคิวแรกที่ถึงจุดหมายหรือยัง
         public bool IsFirstInLineAndReady(NPCController npc)
         {
             if (_npcInQueue.Count == 0) return false;
@@ -41,7 +42,6 @@ namespace Shift25.Managers
             if (_npcInQueue.Count > 0)
             {
                 _npcInQueue.RemoveAt(0);
-                // [Observer Pattern Concept] แจ้งทุกคนในแถวให้ขยับ
                 foreach (var npc in _npcInQueue) npc.RefreshQueuePosition();
             }
         }

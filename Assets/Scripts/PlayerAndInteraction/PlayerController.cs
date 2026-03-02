@@ -1,13 +1,13 @@
 using UnityEngine;
-using UnityEngine.InputSystem; 
+using UnityEngine.InputSystem;
 using Cinemachine;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 4f;
-    [SerializeField] private Transform cameraTarget; 
+    [SerializeField] public float moveSpeed = 4f;
+    [SerializeField] private Transform cameraTarget;
     [SerializeField] private float lookSensitivity = 0.1f;
 
     private CharacterController _controller;
@@ -22,7 +22,7 @@ public class PlayerController : MonoBehaviour
         Cursor.visible = false;
     }
 
-    public void OnMove(InputAction.CallbackContext context) 
+    public void OnMove(InputAction.CallbackContext context)
     {
         _moveInput = context.ReadValue<Vector2>();
     }
@@ -35,6 +35,15 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         if (PlayerStateManager.Instance.CurrentState == PlayerStateManager.PlayerState.Roaming)
+        {
+            HandleMovement();
+            HandleRotation();
+        }
+
+        bool canMove = PlayerStateManager.Instance.CurrentState == PlayerStateManager.PlayerState.Roaming ||
+                   PlayerStateManager.Instance.CurrentState == PlayerStateManager.PlayerState.Locked;
+
+        if (canMove)
         {
             HandleMovement();
             HandleRotation();
@@ -53,7 +62,7 @@ public class PlayerController : MonoBehaviour
 
         _xRotation -= _lookInput.y * lookSensitivity;
         _xRotation = Mathf.Clamp(_xRotation, -80f, 80f); // Limit vertical look angle
-        
+
         cameraTarget.localRotation = Quaternion.Euler(_xRotation, 0, 0);
     }
 }

@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
-using Shift25.Managers; // เรียกใช้ Manager ทั้งหมด
+using Shift25.Managers;
 using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using UnityEngine.Pool;
@@ -12,9 +12,11 @@ namespace Shift25.Gameplay
     public class NPCController : MonoBehaviour, IInteractable
     {
         public enum NPCState { Browsing, MovingToQueue, WaitingInQueue, WaitingForFood, Scanning, Leaving }
+        
         private NPCState _currentState;
-
         private NavMeshAgent _agent;
+        private Animator _animator;
+        
         private Transform _exitPoint;
         private List<ScanItemData> _shoppingCart = new List<ScanItemData>();
         private IObjectPool<NPCController> _pool;
@@ -24,28 +26,32 @@ namespace Shift25.Gameplay
         private MicrowaveRequestData _mySelectedRequest; 
         private bool _needsMicrowave = false;
 
-        // [Logic] แสดงปุ่ม Interact เฉพาะคิวแรกที่เข้าตำแหน่ง
         public string InteractionPrompt 
         {
             get {
-                if (_currentState == NPCState.Scanning || _currentState == NPCState.Leaving) return "";
-                
+                if (this == null || _currentState == NPCState.Scanning || _currentState == NPCState.Leaving) return "";
                 QueueManager.Instance.GetTargetPoint(this, out int index);
                 if (index != 0) return ""; 
-
+                
                 float dist = Vector3.Distance(transform.position, QueueManager.Instance.GetTargetPoint(this, out _).position);
-                if (dist > 1.0f) return "";
+                if (dist > 1.2f) return "";
 
                 if (_currentState == NPCState.WaitingInQueue || _currentState == NPCState.MovingToQueue) return "Press E to Scan Items";
                 if (_currentState == NPCState.WaitingForFood && MicrowaveManager.Instance.CurrentState == MicrowaveManager.MicrowaveState.Done) return "Press E to Give Food";
-                
                 return "";
             }
         }
 
-        private void Awake() => _agent = GetComponent<NavMeshAgent>();
+        private void Awake()
+        {
+            _agent = GetComponent<NavMeshAgent>();
+            _animator = GetComponent<Animator>();
+            
+            // Set high quality avoidance to prevent NPCs from walking through each other
+            _agent.obstacleAvoidanceType = ObstacleAvoidanceType.HighQualityObstacleAvoidance;
+            _agent.avoidancePriority = Random.Range(0, 99);
+        }
 
-        // [Initialize Pattern] เรียกใช้เมื่อลูกค้าเกิดจาก Pool
         public void Initialize(Transform exit, IObjectPool<NPCController> pool, List<Transform> browsePts)
         {
             _exitPoint = exit;
@@ -57,41 +63,40 @@ namespace Shift25.Gameplay
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
 
-            // [Data-Driven] ดึงข้อมูลจากกะปัจจุบัน
             var currentPhase = GamePhaseManager.Instance.CurrentPhase;
-            if (currentPhase == null) return;
-
-            // 1. สุ่มสินค้าใส่รถเข็น
-            int count = Random.Range(currentPhase.minItemsPerCustomer, currentPhase.maxItemsPerCustomer + 1);
-            for (int i = 0; i < count; i++)
+            if (currentPhase != null)
             {
-                if (currentPhase.availableItems.Count > 0)
-                    _shoppingCart.Add(currentPhase.availableItems[Random.Range(0, currentPhase.availableItems.Count)]);
-            }
+                int count = Random.Range(currentPhase.minItemsPerCustomer, currentPhase.maxItemsPerCustomer + 1);
+                for (int i = 0; i < count; i++)
+                {
+                    if (currentPhase.availableItems.Count > 0)
+                        _shoppingCart.Add(currentPhase.availableItems[Random.Range(0, currentPhase.availableItems.Count)]);
+                }
 
-            // 2. สุ่มความต้องการไมโครเวฟ
-            _needsMicrowave = (Random.value < 0.3f);
-            if (_needsMicrowave && currentPhase.availableMicrowaveRequests.Count > 0)
-            {
-                _mySelectedRequest = currentPhase.availableMicrowaveRequests[Random.Range(0, currentPhase.availableMicrowaveRequests.Count)];
+                _needsMicrowave = (Random.value < 0.3f);
+                if (_needsMicrowave && currentPhase.availableMicrowaveRequests.Count > 0)
+                    _mySelectedRequest = currentPhase.availableMicrowaveRequests[Random.Range(0, currentPhase.availableMicrowaveRequests.Count)];
             }
 
             SwitchState(NPCState.Browsing);
         }
 
-        private void OnDisable() => _cts?.Cancel();
-
         public void SwitchState(NPCState newState)
         {
+            if (this == null || !gameObject.activeInHierarchy) return;
+            
             _currentState = newState;
-            if (_agent == null || !gameObject.activeInHierarchy) return;
+            _agent.isStopped = false;
 
             switch (_currentState)
             {
-                case NPCState.Browsing: HandleBrowsing(_cts.Token).Forget(); break;
-                case NPCState.MovingToQueue: QueueManager.Instance.JoinQueue(this); break;
+                case NPCState.Browsing: 
+                    HandleBrowsing(_cts.Token).Forget(); 
+                    break;
+                case NPCState.MovingToQueue: 
+                    QueueManager.Instance.JoinQueue(this); 
+                    break;
                 case NPCState.Leaving: 
-                    _agent.isStopped = false;
                     _agent.SetDestination(_exitPoint.position);
                     CheckExitDistance(_cts.Token).Forget(); 
                     break;
@@ -103,36 +108,51 @@ namespace Shift25.Gameplay
             try {
                 int visits = Random.Range(1, 4);
                 for (int i = 0; i < visits; i++) {
-                    if (token.IsCancellationRequested) return;
-                    if (_browsingPoints.Count > 0) {
-                        _agent.SetDestination(_browsingPoints[Random.Range(0, _browsingPoints.Count)].position);
-                        await UniTask.WaitUntil(() => !_agent.pathPending && _agent.remainingDistance < 0.6f, cancellationToken: token);
-                        await UniTask.Delay(Random.Range(2000, 5000), cancellationToken: token);
-                    }
+                    if (token.IsCancellationRequested || this == null) return;
+                    
+                    Transform target = _browsingPoints[Random.Range(0, _browsingPoints.Count)];
+                    _agent.SetDestination(target.position);
+
+                    // Wait until NPC reaches the shelf
+                    await UniTask.WaitUntil(() => !_agent.pathPending && _agent.remainingDistance < 0.6f, cancellationToken: token);
+                    
+                    _agent.isStopped = true; // Stop walking smoothly
+                    await UniTask.Delay(Random.Range(2000, 5000), cancellationToken: token);
+                    if (this != null) _agent.isStopped = false;
                 }
                 SwitchState(NPCState.MovingToQueue);
-            } catch { }
+            } catch (System.OperationCanceledException) { }
         }
 
         public void RefreshQueuePosition()
         {
-            if (_agent == null || !_agent.isOnNavMesh || _currentState == NPCState.Scanning) return;
+            if (this == null || !_agent.isOnNavMesh || _currentState == NPCState.Scanning) return;
+            
             Transform target = QueueManager.Instance.GetTargetPoint(this, out int index);
-            if (target != null) _agent.SetDestination(target.position);
+            if (target != null)
+            {
+                _agent.isStopped = false;
+                _agent.SetDestination(target.position);
+            }
+        }
+
+        private void Update()
+        {
+            if (_animator == null || _agent == null) return;
+            // Animation is driven by actual NavMesh velocity to prevent sliding
+            float currentSpeed = _agent.velocity.magnitude;
+            _animator.SetBool("IsWalking", currentSpeed > 0.1f);
         }
 
         public void Interact()
         {
             QueueManager.Instance.GetTargetPoint(this, out int index);
-            if (index != 0) return;
-
-            if (_currentState == NPCState.WaitingInQueue || _currentState == NPCState.MovingToQueue)
+            float dist = Vector3.Distance(transform.position, QueueManager.Instance.GetTargetPoint(this, out _).position);
+            
+            if (index == 0 && dist < 1.2f)
             {
-                StartScanning().Forget();
-            }
-            else if (_currentState == NPCState.WaitingForFood && MicrowaveManager.Instance.CurrentState == MicrowaveManager.MicrowaveState.Done)
-            {
-                CompleteHandover();
+                if (_currentState == NPCState.WaitingInQueue || _currentState == NPCState.MovingToQueue) StartScanning().Forget();
+                else if (_currentState == NPCState.WaitingForFood && MicrowaveManager.Instance.CurrentState == MicrowaveManager.MicrowaveState.Done) CompleteHandover();
             }
         }
 
@@ -141,9 +161,10 @@ namespace Shift25.Gameplay
             _currentState = NPCState.Scanning;
             _agent.isStopped = true;
 
-            // [UniTask] ส่งสินค้าของคุณเข้าเครื่องสแกน
             bool scanFinished = await ScanManager.Instance.StartScanSession(_shoppingCart);
             
+            if (this == null) return;
+
             if (scanFinished) {
                 if (_needsMicrowave && _mySelectedRequest != null) {
                     MicrowaveManager.Instance.AssignPendingRequest(_mySelectedRequest);
@@ -168,14 +189,21 @@ namespace Shift25.Gameplay
         {
             try {
                 while (_currentState == NPCState.Leaving) {
-                    if (token.IsCancellationRequested) return;
+                    if (token.IsCancellationRequested || this == null) return;
+                    
                     if (!_agent.pathPending && _agent.remainingDistance < 0.8f) {
                         _pool.Release(this);
                         break;
                     }
                     await UniTask.Delay(500, cancellationToken: token);
                 }
-            } catch { }
+            } catch (System.OperationCanceledException) { }
+        }
+
+        private void OnDisable()
+        {
+            _cts?.Cancel();
+            if (_agent != null && _agent.isOnNavMesh) _agent.isStopped = true;
         }
     }
 }

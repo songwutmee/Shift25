@@ -26,3 +26,6 @@ MonoBehaviour:
   availableMicrowaveRequests:
   - {fileID: 11400000, guid: 06a4f2fb633916942ab3edd1e251ffd1, type: 2}
   - {fileID: 11400000, guid: b7c12505bd08e0a45bf7d61f521c8393, type: 2}
+  minTrashSpawnInterval: 10
+  maxTrashSpawnInterval: 60
+  maxTrashInRoom: 5

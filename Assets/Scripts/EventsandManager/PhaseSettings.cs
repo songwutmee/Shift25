@@ -18,9 +18,17 @@ namespace Shift25.Managers // [Namespace Fix] ให้อยู่บ้าน�
         [Header("Item Scanning Data")]
         public int minItemsPerCustomer;
         public int maxItemsPerCustomer;
-        public List<ScanItemData> availableItems; // ลาก ScanItemData อะไรใส่ก็ได้
+        public List<ScanItemData> availableItems; 
 
         [Header("Microwave Data")]
         public List<Shift25.Gameplay.MicrowaveRequestData> availableMicrowaveRequests;
+
+        [Header("Trash System Settings")]
+        public float minTrashSpawnInterval = 30f; 
+        public float maxTrashSpawnInterval = 60f; 
+        public int maxTrashInRoom = 5;            
+
     }
+
+    
 }
