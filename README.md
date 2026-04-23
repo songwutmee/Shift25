@@ -4,7 +4,7 @@
 
 *A psychological first-person simulation that explores the existential dread of modern labor. Set in a convenience store floating in a void, players enter "Shift 25"—a non-existent hour representing unending, unpaid labor and corporate oppression.*
 
-[![Shift25 Preview](https://img.youtube.com/vi/4eMF9I6VUo8/maxresdefault.jpg)](https://youtu.be/4eMF9I6VUo8?si=q9kmyCdZzEacIlyA)
+[![Shift25 Preview](https://img.youtube.com/vi/iMtj-iiXoLw/maxresdefault.jpg)](https://youtu.be/iMtj-iiXoLw?si=oOz16MB4j8ZWaY9C)
 
 **[  Status: Work in Progress / Mini Thesis ]**
 
