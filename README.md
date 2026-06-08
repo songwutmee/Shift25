@@ -2,16 +2,22 @@
 
 # Shift25
 
-*A psychological first-person simulation that explores the existential dread of modern labor. Set in a convenience store floating in a void, players enter "Shift 25"—a non-existent hour representing unending, unpaid labor and corporate oppression.*
+*A psychological first-person simulation that explores the existential dread of modern labor. Set in a convenience store floating in a void, players enter "Shift 25"—a non-existent hour representing the exhaustion and despair of service work.*
 
-[![Shift25 Preview](https://img.youtube.com/vi/iMtj-iiXoLw/maxresdefault.jpg)](https://youtu.be/iMtj-iiXoLw?si=oOz16MB4j8ZWaY9C)
+<a href="https://youtu.be/iMtj-iiXoLw?si=oOz16MB4j8ZWaY9C">
+  <img src="https://img.youtube.com/vi/iMtj-iiXoLw/maxresdefault.jpg" width="100%">
+</a>
+
+<a href="https://youtu.be/iMtj-iiXoLw?si=oOz16MB4j8ZWaY9C">
+  <img src="https://img.shields.io/badge/▶%20CLICK%20TO%20WATCH%20DEMO-FF0000?style=for-the-badge&logo=youtube&logoColor=white" />
+</a>
 
 **[  Status: Work in Progress / Mini Thesis ]**
 
 </div>
 
 ###  Project Overview
-**Shift25** is an experimental project built to reflect the burnout and systemic pressure of blue-collar service work. Instead of the clock hitting 00:00, it moves to 25:00. You are trapped in a loop of repetitive tasks—scanning items, microwaving food, and managing impatient customers—all while floating in a cosmic void. 
+**Shift25** is an experimental project built to reflect the burnout and systemic pressure of blue-collar service work. Instead of the clock hitting 00:00, it moves to 25:00. You are trapped in a loop, serving customers, restocking shelves, and managing your stress.
 
 The game uses a **PSX-inspired visual style** with mixed-media elements to create an uncomfortable, surreal atmosphere.
 
@@ -21,19 +27,19 @@ The game uses a **PSX-inspired visual style** with mixed-media elements to creat
 Since this is a **Mini Thesis** project, I focused on building a scalable and professional architecture that can handle complex, overlapping gameplay systems.
 
 - **Asynchronous Task Management (UniTask):** 
-I used **UniTask** to handle the game's multi-tasking flow. This allows the microwave to count down and NPCs to move through queues in the background without blocking the main game logic. It makes the code much cleaner than using standard Coroutines and prevents memory leaks.
+I used **UniTask** to handle the game's multi-tasking flow. This allows the microwave to count down and NPCs to move through queues in the background without blocking the main game logic. It makes the game feel responsive while managing many parallel activities.
 
 - **Event-Driven Decoupling (Observer Pattern):** 
-To keep the code organized, I built a central `GameEvents` system. When a player scans an item or the "Pressure" increases, the UI and Sound systems react automatically through events. This means I can add new features (like screen glitches or debt notification sounds) without having to change the core gameplay scripts.
+To keep the code organized, I built a central `GameEvents` system. When a player scans an item or the "Pressure" increases, the UI and Sound systems react automatically through events. This means systems don't directly call each other—they just notify listeners.
 
 - **Finite State Machine (FSM):** 
-NPCs and the Player are governed by a State Pattern. Customers have clear logic for `Browsing`, `Queueing`, and `Scanning`. This prevents bugs like customers walking away while being served and makes the AI behavior feel more intentional and solid.
+NPCs and the Player are governed by a State Pattern. Customers have clear logic for `Browsing`, `Queueing`, and `Scanning`. This prevents bugs like customers walking away while being served and makes adding new behaviors simple.
 
 - **Data-Driven Progression:** 
-All balance values—customer spawn rates, item scan times, and the length of each game phase—are stored in **ScriptableObjects**. This allows me to tune the 60-minute gameplay experience entirely within the Unity Inspector without touching the code, which is a huge time-saver for balancing difficulty.
+All balance values—customer spawn rates, item scan times, and the length of each game phase—are stored in **ScriptableObjects**. This allows me to tune the 60-minute gameplay experience entirely in the editor without recompiling.
 
 - **Optimized Object Pooling:** 
-Since the game involves many customers entering and leaving the store, I implemented an **Object Pooling** system. Instead of constantly creating and destroying NPC objects (which causes lag), I recycle them. I also used `CancellationTokenSource` to ensure that any background tasks are safely stopped when an object is returned to the pool.
+Since the game involves many customers entering and leaving the store, I implemented an **Object Pooling** system. Instead of constantly creating and destroying NPC objects (which causes lag), I reuse them efficiently.
 
 ---
 
