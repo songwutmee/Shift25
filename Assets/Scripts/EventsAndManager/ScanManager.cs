@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Cinemachine;
 using Cysharp.Threading.Tasks;
+using System.Threading;
 
 namespace Shift25.Managers
 {
@@ -9,63 +10,76 @@ namespace Shift25.Managers
     {
         public static ScanManager Instance { get; private set; }
         [SerializeField] private CinemachineVirtualCamera scanCamera;
-        [SerializeField] private Transform[] spawnPoints; 
+        [SerializeField] private Transform spawnRoot;
+        [SerializeField] private float maxDistance = 0.8f;
 
         private List<GameObject> _activeItems = new List<GameObject>();
-        private int _itemsScannedInSession = 0;
-        private int _totalItemsInSession = 0;
-        private bool _isSessionActive = false; // [State] เช็คว่ากำลังสแกนอยู่ไหม
+        private int _scannedInSession, _totalInSession;
+        private bool _active = false;
+        private CancellationTokenSource _cts;
 
         private void Awake() => Instance = this;
 
-        public async UniTask<bool> StartScanSession(List<ScanItemData> itemsToScan)
+        public async UniTask<bool> StartScanSession(List<ScanItemData> items)
         {
-            if (_isSessionActive) return false; // ป้องกันการกดซ้อน
-            _isSessionActive = true;
+            if (_active || items == null || items.Count == 0) return true;
+            _active = true; _scannedInSession = 0; _totalInSession = items.Count;
+            _cts = new CancellationTokenSource();
 
-            _itemsScannedInSession = 0;
-            _totalItemsInSession = itemsToScan.Count;
-
-            // [State Pattern] ล็อกตัวผู้เล่น
-            PlayerStateManager.Instance.SwitchState(PlayerStateManager.PlayerState.Interacting); 
+            PlayerStateManager.Instance.SwitchState(PlayerStateManager.PlayerState.Interacting);
             scanCamera.Priority = 20;
-            
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            UIManager.Instance.SetUIMode(true);
 
-            // [Factory] สร้างของ
-            for (int i = 0; i < itemsToScan.Count; i++)
-            {
-                if (i >= spawnPoints.Length) break;
-                var item = Instantiate(itemsToScan[i].itemPrefab, spawnPoints[i].position, spawnPoints[i].rotation);
-                if (item.TryGetComponent<Shift25.Gameplay.ScannableItem>(out var scannable))
-                    scannable.Initialize(itemsToScan[i]);
-                _activeItems.Add(item);
+            for (int i = 0; i < items.Count; i++) {
+                SpawnItem(items[i]);
+                await UniTask.Delay(150, cancellationToken: _cts.Token);
             }
 
-            // [UniTask] รอจนกว่าสแกนครบ
-            await UniTask.WaitUntil(() => _itemsScannedInSession >= _totalItemsInSession);
-
-            // [Logic] สแกนเสร็จแล้ว ต้องทำความสะอาดก่อนคืนค่า
-            await UniTask.Delay(300); // รอจังหวะนิดนึงให้ Game Feel ดี
-            EndScanSession();
+            MonitorBoundaries(_cts.Token).Forget();
+            await UniTask.WaitUntil(() => _scannedInSession >= _totalInSession || _activeItems.Count == 0);
             
-            _isSessionActive = false;
-            return true; 
+            await UniTask.Delay(300);
+            EndSession();
+            return true;
         }
 
-        public void ReportItemScanned() => _itemsScannedInSession++;
+        private void SpawnItem(ScanItemData data) {
+            GameObject prefab = data.GetRandomPrefab();
+            if (prefab == null) return;
+            var item = Instantiate(prefab, spawnRoot.position + Random.insideUnitSphere * 0.1f, Quaternion.identity);
+            _activeItems.Add(item);
+            if (item.TryGetComponent<Rigidbody>(out var rb)) {
+                rb.isKinematic = false; rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            }
+            if (item.TryGetComponent<Shift25.Gameplay.ScannableItem>(out var s)) s.Initialize(data);
+        }
 
-        private void EndScanSession()
-        {
-            foreach (var item in _activeItems) if(item != null) Destroy(item);
+        private async UniTaskVoid MonitorBoundaries(CancellationToken token) {
+            while (_active && !token.IsCancellationRequested) {
+                for (int i = _activeItems.Count - 1; i >= 0; i--) {
+                    if (_activeItems[i] == null) continue;
+                    if (Vector3.Distance(_activeItems[i].transform.position, spawnRoot.position) > maxDistance) {
+                        _activeItems[i].transform.position = spawnRoot.position + Vector3.up * 0.2f;
+                        if (_activeItems[i].TryGetComponent<Rigidbody>(out var rb)) rb.velocity = Vector3.zero;
+                    }
+                }
+                await UniTask.Delay(200, cancellationToken: token);
+            }
+        }
+
+        public void ReportItemScanned(GameObject obj) {
+            _scannedInSession++; _activeItems.Remove(obj);
+            AudioManager.Instance.PlayScanSFX();
+        }
+
+        private void EndSession() {
+            _active = false; _cts?.Cancel();
+            foreach (var item in _activeItems) if (item != null) Destroy(item);
+            AudioManager.Instance.PlayScanSFX();
             _activeItems.Clear();
-
             scanCamera.Priority = 0;
-            PlayerStateManager.Instance.SwitchState(PlayerStateManager.PlayerState.Roaming); 
-
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            PlayerStateManager.Instance.SwitchState(PlayerStateManager.PlayerState.Roaming);
+            UIManager.Instance.SetUIMode(false);
         }
     }
 }

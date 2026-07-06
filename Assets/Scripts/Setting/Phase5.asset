@@ -1,0 +1,54 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 846de08b2ec56394dbdd19bac035ad86, type: 3}
+  m_Name: Phase5
+  m_EditorClassIdentifier: 
+  phaseNumber: 1
+  durationInSeconds: 20
+  enableMicrowave: 1
+  enableTrash: 1
+  enableCram: 1
+  globalPressureMultiplier: 3.5
+  phaseStartDialogue: {fileID: 11400000, guid: 9d1c7b98cac98b84581a786ddbc36280, type: 2}
+  randomPhaseDialogues:
+  - {fileID: 11400000, guid: 4e1665a81b9d8794989ea00c52bfba06, type: 2}
+  - {fileID: 11400000, guid: 6941c27aeee495742b10bbed2bdffe08, type: 2}
+  - {fileID: 11400000, guid: 63647540bf4d4ea4bb75df1021f300cc, type: 2}
+  - {fileID: 11400000, guid: cb34fb80cb2eecc448947b3a9f8538b4, type: 2}
+  - {fileID: 11400000, guid: 861055ab7f27ebf46aa2bc02fac2e848, type: 2}
+  - {fileID: 11400000, guid: 269291f0ca8eac344be2bfe8e815a2bf, type: 2}
+  - {fileID: 11400000, guid: cce49a4fb293966439d30cd2384e5f73, type: 2}
+  - {fileID: 11400000, guid: 378ab67ef2e13304bb10609591b76fa9, type: 2}
+  - {fileID: 11400000, guid: 81b9b4aac4bf7004588ddf7145f25eb0, type: 2}
+  - {fileID: 11400000, guid: a8cfab1b4850d524a86f93c7c1bccb83, type: 2}
+  - {fileID: 11400000, guid: 5a66d0fde88dc144091203804b62b02c, type: 2}
+  - {fileID: 11400000, guid: 2aafb7beff68a784a910de521eda67d3, type: 2}
+  - {fileID: 11400000, guid: 410b184d2f1de1e4cb753ee8831f2153, type: 2}
+  - {fileID: 11400000, guid: 3ea6a6f22bb697349b9b8e7fbf61b944, type: 2}
+  - {fileID: 11400000, guid: e3a95d2e4e4696a42a1b09a918fef84e, type: 2}
+  maxNPCInStore: 30
+  minItemsPerCustomer: 8
+  maxItemsPerCustomer: 10
+  minSpawnInterval: 1
+  maxSpawnInterval: 3
+  availableItems:
+  - {fileID: 11400000, guid: 513243c3d8a27f74791f812ec012f5fe, type: 2}
+  - {fileID: 11400000, guid: 63902630edd28274fa854b301d98318c, type: 2}
+  - {fileID: 11400000, guid: 7d7e737a5b1a4d248a448bf4cc84e256, type: 2}
+  availableMicrowaveRequests:
+  - {fileID: 11400000, guid: 06a4f2fb633916942ab3edd1e251ffd1, type: 2}
+  - {fileID: 11400000, guid: b7c12505bd08e0a45bf7d61f521c8393, type: 2}
+  maxTrashInRoom: 5
+  minTrashSpawnInterval: 8
+  maxTrashSpawnInterval: 12
+  minShelfDepletionInterval: 10
+  maxShelfDepletionInterval: 20

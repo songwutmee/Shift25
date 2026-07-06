@@ -13,6 +13,14 @@ MonoBehaviour:
   m_Name: Slow
   m_EditorClassIdentifier: 
   itemName: 1
-  itemPrefab: {fileID: 6224904458586733456, guid: af5559c2f2a476e4bba28055d5901a74,
-    type: 3}
+  itemPrefabs:
+  - {fileID: 4513372207544919729, guid: e1f524825417a8645abac4ab8b5d9d4b, type: 3}
+  - {fileID: 6902953312651480916, guid: d18db4973637a61479adac2a6a4f584e, type: 3}
+  - {fileID: 444081658905153576, guid: e107b5df406259e48890b76264f22c1a, type: 3}
+  - {fileID: 5649516564409039495, guid: b0d42211ef5e7d749a10fde26fbb648a, type: 3}
+  - {fileID: 4549995449009192029, guid: 92f62db8384d54c4899665f012da9e19, type: 3}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 8265239551375208101, guid: fb4623222d45b5040acb7cf947d06caf, type: 3}
+  - {fileID: 2180235231968385586, guid: 1dc10342b28783247a93c88df4bd3030, type: 3}
   baseScanTime: 0.8

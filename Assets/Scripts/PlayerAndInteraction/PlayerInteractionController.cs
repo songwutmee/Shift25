@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Shift25.Gameplay;
+using Shift25.Managers;
 
 public class PlayerInteractionController : MonoBehaviour
 {
@@ -14,7 +15,13 @@ public class PlayerInteractionController : MonoBehaviour
     // [New Input System] ปุ่ม E
     public void OnInteract(InputAction.CallbackContext context)
     {
-        if (context.started) _currentInteractable?.Interact();
+        if (context.started && _currentInteractable != null)
+        {
+            // [Audio Integration] Play generic interaction sound
+            if (AudioManager.Instance != null) AudioManager.Instance.PlayInteractSFX();
+
+            _currentInteractable.Interact();
+        }
     }
 
     // [New Input System] ปุ่มคลิกซ้าย (Fire) - แก้ไขตามรูปที่คุณส่งมา
@@ -23,8 +30,8 @@ public class PlayerInteractionController : MonoBehaviour
         if (context.started)
         {
             // [Logic] ยิง Raycast เพื่อดูว่าคลิกโดนสินค้าที่กำลังสแกนอยู่ไหม
-            Ray ray = (Cursor.lockState == CursorLockMode.Locked) 
-                ? _mainCam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0)) 
+            Ray ray = (Cursor.lockState == CursorLockMode.Locked)
+                ? _mainCam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0))
                 : _mainCam.ScreenPointToRay(Input.mousePosition);
 
             if (Physics.Raycast(ray, out RaycastHit hit, rayDistance, interactableLayer))

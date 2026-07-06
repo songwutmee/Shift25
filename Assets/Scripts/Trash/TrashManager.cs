@@ -8,16 +8,19 @@ using System.Threading;
 
 namespace Shift25.Managers
 {
-    // [Oversees trash generation and handles the Object Pool warehouse.
+    // [Singleton Pattern] Manages the accumulation of waste and triggers boss narrative.
     public class TrashManager : MonoBehaviour
     {
         public static TrashManager Instance { get; private set; }
 
         [Header("Configurations")]
-        [SerializeField] private TrashData trashData; 
+        [SerializeField] private TrashData trashData;
         [SerializeField] private Transform[] spawnPoints;
-        
-        // Prevents Garbage Collection spikes by recycling objects.
+
+        [Header("Narrative")]
+        [SerializeField] private DialogueData bossAngryTrashDialogue; // Boss yells when cluttered
+
+        // [Object Pooling] Prevents memory spikes during intense shift phases.
         private IObjectPool<GameObject> _trashPool;
         private List<GameObject> _activeTrashInRoom = new List<GameObject>();
         private CancellationTokenSource _cts;
@@ -27,7 +30,7 @@ namespace Shift25.Managers
             if (Instance == null) Instance = this;
             _cts = new CancellationTokenSource();
 
-            // Initializing the Pool with standard Unity API.
+            // [Factory Pattern] Initializing the Pool warehouse
             _trashPool = new ObjectPool<GameObject>(
                 createFunc: () => Instantiate(trashData.trashPrefab),
                 actionOnGet: (obj) => obj.SetActive(true),
@@ -42,32 +45,40 @@ namespace Shift25.Managers
 
         private async UniTaskVoid TrashGenerationLoop(CancellationToken token)
         {
-            await UniTask.Yield(); 
             while (!token.IsCancellationRequested)
             {
-                var settings = GamePhaseManager.Instance.CurrentPhase;
-                if (settings == null) { await UniTask.Delay(1000); continue; }
+                var currentPhase = GamePhaseManager.Instance.CurrentPhase;
+                if (currentPhase == null || !currentPhase.enableTrash) { await UniTask.Delay(1000); continue; }
 
-                float interval = Random.Range(settings.minTrashSpawnInterval, settings.maxTrashSpawnInterval);
+                // [Negligence Algorithm]
+                if (_activeTrashInRoom.Count >= currentPhase.maxTrashInRoom)
+                {
+                    // [Narrative] Trigger Boss anger when work is neglected
+                    if (Random.value < 0.3f) // 30% chance to remind each tick
+                        NarrativeManager.Instance.DisplayMessage(bossAngryTrashDialogue).Forget();
+
+                    PressureManager.Instance.AddPressure(1.0f);
+                }
+
+                float interval = Random.Range(currentPhase.minTrashSpawnInterval, currentPhase.maxTrashSpawnInterval);
                 await UniTask.Delay((int)(interval * 1000), cancellationToken: token);
 
-                if (_activeTrashInRoom.Count < settings.maxTrashInRoom)
-                {
-                    SpawnTrash();
-                }
+                if (_activeTrashInRoom.Count < currentPhase.maxTrashInRoom) SpawnFromPool();
             }
         }
 
-        private void SpawnTrash()
+        private void SpawnFromPool()
         {
-            // Behave like a factory: pull from pool instead of Instantiate.
-            GameObject trash = _trashPool.Get(); 
-            
+            if (spawnPoints.Length == 0) return;
+
+            // [Object Pooling] Pull from warehouse instead of allocating new memory
+            GameObject trash = _trashPool.Get();
+
             Transform point = spawnPoints[Random.Range(0, spawnPoints.Length)];
             trash.transform.position = point.position;
             trash.transform.rotation = point.rotation;
 
-            // Give the pooled object a reference to return itself.
+            // [Dependency Injection] Ensure the trash object knows how to return to the pool
             if (trash.TryGetComponent<TrashPickup>(out var pickup))
             {
                 pickup.SetPool(_trashPool, trashData);
@@ -83,11 +94,14 @@ namespace Shift25.Managers
 
         public void EvaluateYeetPressure()
         {
+            // [Moral Algorithm] Pressure increases based on customer queue length during disposal
             int queueCount = QueueManager.Instance.CurrentQueueCount;
             if (queueCount > 0)
             {
-                // Moral pressure: Yeeting in front of customers.
-                PressureManager.Instance.AddPressure(2.5f * queueCount);
+                var phase = GamePhaseManager.Instance.CurrentPhase;
+                float multiplier = (phase != null) ? phase.globalPressureMultiplier : 1f;
+
+                PressureManager.Instance.AddPressure(2.5f * queueCount * multiplier);
             }
         }
 

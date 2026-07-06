@@ -22,17 +22,25 @@ namespace Shift25.Managers
         [SerializeField] private GameObject microwaveUIPanel;
         [SerializeField] private TextMeshProUGUI instructionText;
 
-        private MicrowaveRequestData _activeRequest; 
+        [Header("Audio")]
+        [SerializeField] private AudioSource sfxSource;
+        [SerializeField] private AudioClip finishBeepClip; // [New] Assign Beep sound
+
+        private MicrowaveRequestData _activeRequest;
         private float _userSelectedTime;
 
         public bool HasActiveRequest => _activeRequest != null;
 
-        private void Awake() => Instance = this;
+        private void Awake()
+        {
+            if (Instance == null) Instance = this;
+            else Destroy(gameObject);
+        }
 
         public void AssignPendingRequest(MicrowaveRequestData request)
         {
             _activeRequest = request;
-            if (instructionText != null)
+            if (instructionText != null && _activeRequest != null)
                 instructionText.text = $"Order: \"{_activeRequest.instructionPhrase}\"";
         }
 
@@ -42,49 +50,60 @@ namespace Shift25.Managers
         public async UniTask StartSettingTime()
         {
             if (!HasActiveRequest) return;
-
             CurrentState = MicrowaveState.SettingTime;
+            UIManager.Instance.SetUIMode(true);
             microwaveUIPanel.SetActive(true);
-            
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
 
             await UniTask.WaitUntil(() => CurrentState == MicrowaveState.Cooking);
-            
+
             microwaveUIPanel.SetActive(false);
-            DeactivateCamera(); 
-            
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            DeactivateCamera();
+            UIManager.Instance.SetUIMode(false);
         }
 
         public void SubmitCookingTime(float sliderValue)
         {
-            _userSelectedTime = sliderValue * 5.0f; 
-            CurrentState = MicrowaveState.Cooking; 
+            _userSelectedTime = sliderValue * 5.0f;
+            CurrentState = MicrowaveState.Cooking;
         }
 
         public async UniTask RunCookingTimer(Animator doorAnimator)
         {
             if (doorAnimator != null) doorAnimator.SetBool("IsOpen", false);
             
-            Debug.Log($"[Microwave] Cooking for {_userSelectedTime} seconds...");
-            
+            // [UniTask] Wait for cooking duration
             await UniTask.Delay((int)(_userSelectedTime * 1000));
 
+            // [Audio] Play finish beep when Done
+            if (sfxSource != null && finishBeepClip != null)
+                sfxSource.PlayOneShot(finishBeepClip);
+
             CurrentState = MicrowaveState.Done;
-            Debug.Log("[Microwave] BEEP BEEP! Finished.");
         }
-        //public API 
+
         public float GetResultAndReset()
         {
-            float pGain = 1f; 
-            
-            if (_userSelectedTime < _activeRequest.minAcceptableTime) pGain = 3f; 
-            else if (_userSelectedTime > _activeRequest.maxAcceptableTime) pGain = 2f; 
+            if (_activeRequest == null) return 0;
+            float pGain = EvaluateResult(_userSelectedTime);
             _activeRequest = null;
             CurrentState = MicrowaveState.Idle;
-            
+            return pGain;
+        }
+        
+        private float EvaluateResult(float finalTime)
+        {
+            float pGain = 1f;
+            DialogueData feedback = null;
+
+            if (finalTime < _activeRequest.minAcceptableTime) {
+                pGain = 3f;
+                feedback = _activeRequest.tooColdDialogue;
+            } else if (finalTime > _activeRequest.maxAcceptableTime) {
+                pGain = 2f;
+                feedback = _activeRequest.tooHotDialogue;
+            }
+
+            if (feedback != null) NarrativeManager.Instance.DisplayMessage(feedback).Forget();
             return pGain;
         }
     }

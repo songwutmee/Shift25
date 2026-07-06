@@ -2,10 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
+using UnityEngine.InputSystem; // [New Input System] Required for Keyboard check
 
+// [Singleton Pattern] Manages the global stress level (Pressure) of the player.
 public class PressureManager : MonoBehaviour
 {
-    //Singleton instance
     public static PressureManager Instance { get; private set; }
 
     [Header("Pressure Stats")]
@@ -16,49 +17,68 @@ public class PressureManager : MonoBehaviour
 
     private void Awake()
     {
-        // Implementing Singleton pattern
-        if (Instance == null)
-        {
+        if (Instance == null) {
             Instance = this;
             DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
+        } else {
             Destroy(gameObject);
         }
     }
 
-    private void Start()
+    private void Start() => StartPressureTick().Forget();
+
+    private void Update()
     {
-        //Unitask to handle pressure increase over time
-        StartPressureTick().Forget();
+        // [Debug Tooling] Press 'P' to manipulate pressure for testing
+        // Requirement: P once -> 70%, P again -> 100%
+        if (Keyboard.current.pKey.wasPressedThisFrame)
+        {
+            HandleDebugPressure();
+        }
     }
+
+    private void HandleDebugPressure()
+    {
+        float threshold70 = maxPressure * 0.7f;
+        
+        if (currentPressure < threshold70)
+        {
+            // Jump to 70% to test Red Shader / Eyes
+            AddPressure(threshold70 - currentPressure);
+            Debug.Log("<color=yellow>[Debug]</color> Pressure jumped to 70%");
+        }
+        else
+        {
+            // Jump to 100% to test the 25:00 Ending
+            AddPressure(maxPressure - currentPressure);
+            Debug.Log("<color=red>[Debug]</color> Pressure jumped to 100%");
+        }
+    }
+
+    public float GetCurrentPressure() => currentPressure;
+    public float GetMaxPressure() => maxPressure;
 
     private async UniTaskVoid StartPressureTick()
     {
         while (isGameRunning)
         {
-            AddPressure(0.1f); // Initial pressure increment
-            await UniTask.Delay(1000); // Wait for 1 second
+            AddPressure(0.05f); // Reduced default tick for 1-hour gameplay
+            await UniTask.Delay(1000); 
         }
     }
 
     public void AddPressure(float amount)
     {
         currentPressure = Mathf.Clamp(currentPressure + amount, 0, maxPressure);
-
-        //for observer to UI or any visual
         GameEvents.RaisePressureChanged(currentPressure, maxPressure);
 
-        if (currentPressure >= maxPressure)
-        {
-           TriggerMentalCollapse();
-        }
+        if (currentPressure >= maxPressure) TriggerMentalCollapse();
     }
 
     private void TriggerMentalCollapse()
     {
+        if (!isGameRunning) return;
         isGameRunning = false;
-        Debug.Log("Mental Collapse Triggered! : Game Ended");
+        Debug.Log("[System] Mental Collapse Reached.");
     }
 }

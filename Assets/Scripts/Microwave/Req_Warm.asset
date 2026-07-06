@@ -13,7 +13,9 @@ MonoBehaviour:
   m_Name: Req_Warm
   m_EditorClassIdentifier: 
   instructionPhrase: Just a little bit..
+  instructionDialogue: {fileID: 11400000, guid: df73229f784d627488d6e0d949c935b1,
+    type: 2}
   minAcceptableTime: 1
   maxAcceptableTime: 1.5
-  failTooColdText: 
-  failTooHotText: 
+  tooColdDialogue: {fileID: 11400000, guid: ab1c7f95d5815fd46b1228e91d53aa70, type: 2}
+  tooHotDialogue: {fileID: 11400000, guid: 66d7fc437fea23847a92e631a7ee2c64, type: 2}
